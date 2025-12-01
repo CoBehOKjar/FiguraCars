@@ -1,9 +1,26 @@
 local State = {}
 
 -- --- Константы настройки (Config) ---
+Driver = models.car.F1.Driver
+F1 = models.car.F1.WorldRoot
+Tens = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUITens
+Units = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIUnits
 
 -- Настройки двигателя и трансмиссии
 State.Config = {
+    SPEED_NUMS = {
+    vec(123/128,40/128),
+    vec(123/128,45/128),
+    vec(123/128,50/128),
+    vec(123/128,55/128),
+    vec(123/128,60/128),
+    vec(123/128,65/128),
+    vec(123/128,70/128),
+    vec(123/128,75/128),
+    vec(123/128,80/128),
+    vec(123/128,85/128)
+    },
+
     IDLE_RPM = 800,               -- Холостые обороты
     MAX_RPM = 12000,              -- Максимальные обороты (повышено для Ф1)
     RPM_ACCEL_BASE_RATE = 250,    -- Скорость набора оборотов
@@ -70,6 +87,10 @@ State.Data = {
     inVehicle = false,
     isVehicleOnGround = false,
     accelState = false   -- Нажат ли газ
+}
+
+State.DriverPose = {
+
 }
 
 return State

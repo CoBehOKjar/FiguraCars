@@ -7,6 +7,7 @@ local Physic = {}
 local cfg = state.Config
 local data = state.Data
 
+
 -- Вспомогательная функция для плавного изменения значений
 local function smooth(current, target, factor)
     return current + (target - current) * factor
@@ -112,20 +113,15 @@ function Physic.tick()
 
     -- Логика включения/отображения машины
     local showCar = inVehicle -- Машина видна, только если мы внутри транспорта
-    models.car.F1.Root.Car:setVisible(showCar)
+    F1:setVisible(showCar)
     renderer:setRenderVehicle(not showCar) -- Скрываем ванильный транспорт
 
     -- Управление видимостью игрока (сидя в болиде)
     if showCar then
-        vanilla_model.LEFT_LEG:setVisible(false)
-        vanilla_model.RIGHT_LEG:setVisible(false)
-        -- Позиционирование модели машины (близко к земле для Ф1)
-        models.car.F1.Root.Car:setPos(0, 6, 0)
-        -- Игрок сидит чуть ниже
-        vanilla_model.ALL:setPos(0, -5, 0)
+        animations["car.F1"].Steering:play()
+        models.car.F1:setPos(0, 6, 0)
     else
-        vanilla_model.ALL:setVisible(true)
-        vanilla_model.ALL:setPos(0, 0, 0)
+        models.car.F1:setPos(0, 0, 0)
     end
 
     -- Если машина активна, считаем физику
@@ -140,7 +136,7 @@ function Physic.tick()
         updateSuspension()
 
         -- Применение трансформаций к модели
-        local car = models.car.F1.Root.Car
+        local car = F1.Car.Frame
         car.WheelFR:setRot(0, data.steerAngle, data.wheelZ.FR)
         car.WheelFL:setRot(0, data.steerAngle, data.wheelZ.FL)
         car.WheelBL:setRot(0, 0, -data.wheelZ.RL)
