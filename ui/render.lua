@@ -2,7 +2,9 @@ local state = require("state")
 
 local Render = {}
 
-local function updateSpeedometer()
+local segmentRPM = state.Config.MAX_RPM / (#state.Config.RPM_LINE - 1)
+
+local function updateSpeed()
     local speed = math.floor(math.abs(state.Data.speedMps))
 
     if speed > 99 then                                                      --?Max display speed
@@ -21,8 +23,25 @@ local function updateSpeedometer()
     end
 end
 
+local function updateRPM()
+    local stateIndex = math.floor(state.Data.engineRPM / segmentRPM) + 1
+    local RPMUV = math.max(1, math.min(#state.Config.RPM_LINE, stateIndex))
+
+    if models.car.F1.WorldRoot.Car.Frame.SteeringWheel then
+        RPM:setUV(state.Config.RPM_LINE[RPMUV])
+    end
+end
+
+local function updateGear()
+    if models.car.F1.WorldRoot.Car.Frame.SteeringWheel then
+        Gear:setUV(state.Config.GEAR_LINE[state.Data.currentGear])
+    end
+end
+
 function Render.tick()
-    updateSpeedometer()
+    updateSpeed()
+    updateGear()
+    updateRPM()
 end
 
 function Render.render(delta)                                               --?Rendering vehicle
