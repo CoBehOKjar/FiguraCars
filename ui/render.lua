@@ -27,7 +27,7 @@ end
 
 function Render.render(delta)                                               --?Rendering vehicle
     local pos = player:getPos(delta)*16
-    F1:setPos(pos[1], pos[2]+6, pos[3])
+    F1:setPos(pos[1], pos[2]+7, pos[3])
         :setRot(0,-player:getBodyYaw(delta)-180,0)
 end
 

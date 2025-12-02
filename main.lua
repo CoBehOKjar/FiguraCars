@@ -8,7 +8,7 @@ local sound = require("core.sound")
 
 function events.entity_init()
     vanilla_model.ALL:setVisible(false)
-    Driver:setPrimaryTexture("Skin")
+    Driver:setPrimaryTexture("SKIN")
 
     action_wheel.init()
     sound.init()
@@ -17,6 +17,7 @@ end
 
 
 function events.tick()
+    if not player:isLoaded() then return end
     physic.tick()
     render.tick()
     

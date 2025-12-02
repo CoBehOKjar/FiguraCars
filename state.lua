@@ -8,6 +8,15 @@ Units = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIUnits
 
 -- Настройки двигателя и трансмиссии
 State.Config = {
+    ACKEY = keybinds:fromVanilla("key.forward"),
+    BKKEY = keybinds:fromVanilla("key.back"),
+    LFKEY = keybinds:fromVanilla("key.left"),
+    RTKEY = keybinds:fromVanilla("key.right"),
+
+    GAS = animations["car.F1"].Gas,
+    REVERSE = animations["car.F1"].Reverse,
+    STEERING = animations["car.F1"].Steering,
+
     SPEED_NUMS = {
     vec(123/128,40/128),
     vec(123/128,45/128),
@@ -25,6 +34,9 @@ State.Config = {
     MAX_RPM = 12000,              -- Максимальные обороты (повышено для Ф1)
     RPM_ACCEL_BASE_RATE = 250,    -- Скорость набора оборотов
     RPM_DECEL_RATE = 0.15,        -- Скорость сброса оборотов
+    RPM_TO_WHEEL_SPEED_FACTOR = 0.0005,
+    COASTING_WHEEL_FACTOR = 0.1,
+    REVERSE_SLOWDOWN_FACTOR = 0.5,
     
     -- Обороты переключения передач
     SHIFT_UP_RPM = 11500,         -- Переключение вверх
@@ -38,7 +50,7 @@ State.Config = {
         [3] = 20,
         [4] = 35,
         [5] = 50,
-        [6] = 70 -- Добавлена 6 передача для Ф1
+        [6] = 70
     },
 
     -- Передаточные числа
@@ -52,13 +64,9 @@ State.Config = {
     },
 
     -- Рулевое управление
+    STEERING_SMOOTHNESS = 0.1,
     STEERING_SENSITIVITY = 45,
-    MAX_STEER_ANGLE = 45, -- Уменьшен угол для Ф1
-
-    -- Подвеска (настроена жестче для Ф1)
-    AIR_WHEEL_Z = 6,
-    GROUND_WHEEL_Z = 8,
-    WHEEL_Z_SMOOTH = 0.8, -- Более резкая реакция подвески
+    MAX_STEER_ANGLE = 45,
 }
 
 -- --- Переменные состояния (Runtime Data) ---
@@ -74,19 +82,15 @@ State.Data = {
     acceleration = 0,
     
     steerAngle = 0,      -- Угол поворота колес
-    
-    -- Состояние подвески колес
-    wheelZ = {
-        FR = 8,
-        FL = -8,
-        RL = 8,
-        RR = -8
-    },
 
     -- Флаги состояния игрока/машины
     inVehicle = false,
     isVehicleOnGround = false,
-    accelState = false   -- Нажат ли газ
+
+    accelState = false,
+    backState = false,
+    leftState = false,
+    rightState = false
 }
 
 State.DriverPose = {
