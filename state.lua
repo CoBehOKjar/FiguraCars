@@ -2,6 +2,7 @@ local State = {}
 
 -- --- Константы настройки (Config) ---
 Driver = models.car.F1.Driver
+DriverFP = models.car.F1.WorldRoot.DriverFP
 F1 = models.car.F1.WorldRoot
 Tens = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUITens
 Units = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIUnits
@@ -109,6 +110,7 @@ State.Data = {
     -- Флаги состояния игрока/машины
     inVehicle = false,
     isVehicleOnGround = false,
+    isDriving = false,
 
     accelState = false,
     backState = false,
@@ -116,8 +118,8 @@ State.Data = {
     rightState = false
 }
 
-State.DriverPose = {
-
+State.Settings = {
+    lowCam = true,
 }
 
 return State

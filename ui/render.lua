@@ -42,6 +42,22 @@ function Render.tick()
     updateSpeed()
     updateGear()
     updateRPM()
+
+    local showCar = state.Data.inVehicle
+    F1:setVisible(showCar)
+    renderer:setRenderVehicle(not showCar)
+
+    local driverVisible = not showCar
+    local parts = { "LeftLeg", "RightLeg", "LeftArm", "RightArm", "Body" }
+    for _, part in ipairs(parts) do
+        if Driver[part] then
+            Driver[part]:setVisible(driverVisible)
+        end
+    end
+    
+    if state.Settings.lowCam then
+        renderer:setCameraPos(0, -0.3, 0)
+    end
 end
 
 function Render.render(delta)                                               --?Rendering vehicle

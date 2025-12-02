@@ -7,10 +7,19 @@ local cfg = state.Config
 local data = state.Data
 
 
+
 -- Вспомогательная функция для плавного изменения значений
 local function smooth(current, target, factor)
     return current + (target - current) * factor
 end
+
+
+local function stopWheels()
+    if cfg.GAS then cfg.GAS:stop() end
+    if cfg.REVERSE then cfg.REVERSE:stop() end
+end
+
+
 
 -- Обновление физики двигателя (обороты, передачи)
 local function updateEngine(isAccelerating)
@@ -52,6 +61,8 @@ local function updateEngine(isAccelerating)
     data.engineRPM = math.max(cfg.IDLE_RPM, math.min(cfg.MAX_RPM, data.engineRPM))
 end
 
+
+
 -- Обновление рулевого управления
 local function updateSteering()
     local steerInput = 0
@@ -63,25 +74,29 @@ local function updateSteering()
         steerInput = steerInput - 1
     end
 
+    if data.backState and not data.accelState then
+        steerInput = -steerInput
+    end
+
     local targetAngle = steerInput * cfg.MAX_STEER_ANGLE
     data.steerAngle = smooth(data.steerAngle, targetAngle, cfg.STEERING_SMOOTHNESS)
 end
 
+
+
 -- Обновление анимации колес
 local function updateWheelRotation()
-    local directionalSpeed = -data.speedMps -- Направленная скорость
-    local absSpeed = math.abs(directionalSpeed)
-    local isDriving = data.accelState or data.backState -- Нажата ли клавиша газа или заднего хода
+    local absSpeed = math.abs(data.speedMps)
+    data.isDriving = data.accelState or data.backState -- Нажата ли клавиша газа или заднего хода
     
     local rotationSpeed = 0
 
-    if isDriving then
+    if data.isDriving then
         -- 1. Движение с нажатыми клавишами (зависит от RPM и передачи)
         
         -- Скорость колеса пропорциональна RPM * GearRatio
         -- Используем max(1, data.currentGear) для случая, если передача еще не определена
-        local effectiveRPM = data.engineRPM * cfg.gearRatio[data.currentGear]
-        rotationSpeed = effectiveRPM * cfg.RPM_TO_WHEEL_SPEED_FACTOR
+        rotationSpeed = (data.engineRPM * cfg.gearRatio[data.currentGear]) * cfg.RPM_TO_WHEEL_SPEED_FACTOR
 
         if data.backState and not data.accelState then
             -- Если нажата только клавиша назад, делаем вращение в 10 раз медленнее
@@ -115,8 +130,8 @@ local function updateWheelRotation()
         playBackward = true
     else
         -- Если ничего не нажато — используем скорость
-        playForward = directionalSpeed > 0.1
-        playBackward = directionalSpeed < -0.1
+        playForward = data.speedMps < -0.1
+        playBackward = data.speedMps > 0.1
     end
 
     if playForward then 
@@ -132,25 +147,16 @@ local function updateWheelRotation()
         end
         if animGas then animGas:stop() end
     else
-        -- Остановка, если ни одно из условий не выполнено
-        if animGas then animGas:stop() end
-        if animReverse then animReverse:stop() end
+        stopWheels()
     end
 end
 
 
 -- Главная функция тика физики
 function Physic.tick()
-    -- Определение состояния игрока и транспорта
     local vehicle = player:getVehicle()
-    local inVehicle = false
-    local onGround = player:isOnGround()
-
-    if vehicle then
-        -- Простая проверка, сидит ли игрок в лодке/вагонетке
-        inVehicle = true
-        onGround = vehicle:isOnGround()
-    end
+    local inVehicle = vehicle ~= nil
+    local onGround = inVehicle and vehicle:isOnGround()
     
     data.inVehicle = inVehicle
     data.isVehicleOnGround = onGround
@@ -166,7 +172,7 @@ function Physic.tick()
     
     -- Расчет НАПРАВЛЕННОЙ скорости
     local yaw = math.rad(player:getBodyYaw())
-    local bodyDir = vec(math.sin(yaw), 0, -math.cos(yaw)) -- Вектор направления машины (вперед)
+    local bodyDir = vec(math.sin(yaw), 0, -math.cos(yaw))
     local flatVel = vec(velocity.x, 0, velocity.z)
     
     -- Cкалярная скорость вдоль направления движения
@@ -174,30 +180,19 @@ function Physic.tick()
     
     data.acceleration = data.speedMps - data.prevSpeedMps
 
-    -- Логика включения/отображения машины
-    local showCar = inVehicle -- Машина видна, только если мы внутри транспорта
-    F1:setVisible(showCar)
-    renderer:setRenderVehicle(not showCar) -- Скрываем ванильный транспорт
-
-    -- Управление видимостью игрока
-    if showCar then
+    
+    if state.Data.inVehicle then
         cfg.STEERING:setSpeed(0)
         cfg.STEERING:setTime(1.0)
         cfg.STEERING:play()
         models.car.F1:setPos(0, 8, 0)
-
-        Driver.RightLeg:setVisible(false)
-        Driver.LeftLeg:setVisible(false)
     else
         models.car.F1:setPos(0, 0, 0)
         cfg.STEERING:stop()
-
-        Driver.RightLeg:setVisible(true)
-        Driver.LeftLeg:setVisible(true)
     end
 
     -- Если машина активна, считаем физику
-    if showCar then
+    if state.Data.inVehicle then
         if not data.isEngineOn then
             data.isEngineOn = true
             data.engineRPM = cfg.IDLE_RPM
@@ -215,18 +210,12 @@ function Physic.tick()
     else
         data.isEngineOn = false
         data.engineRPM = 0
-        
-        -- Гарантируем, что анимации остановлены, когда машина неактивна
-        local animGas = cfg.GAS
-        local animReverse = cfg.REVERSE
-        if animGas then animGas:stop() end
-        if animReverse then animReverse:stop() end
+        stopWheels()
         end
     end
 
     -- Сохранение предыдущих значений
     data.prevSpeedMps = data.speedMps
-    data.prevEngineRPM = data.engineRPM
 
 
 return Physic
