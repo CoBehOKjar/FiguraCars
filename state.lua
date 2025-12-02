@@ -110,8 +110,10 @@ State.Data = {
     -- Флаги состояния игрока/машины
     inVehicle = false,
     isVehicleOnGround = false,
-    isDriving = false,
+    isDriving = false
+}
 
+State.Input = {
     accelState = false,
     backState = false,
     leftState = false,

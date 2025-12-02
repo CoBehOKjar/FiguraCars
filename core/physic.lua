@@ -6,7 +6,8 @@ local Physic = {}
 
 local cfg = state.Config
 local data = state.Data
-
+local input = state.Input
+local lastF, lastB, lastL, lastR = false, false, false, false
 
 
 -- Вспомогательная функция для плавного изменения значений
@@ -68,14 +69,14 @@ end
 local function updateSteering()
     local steerInput = 0
 
-    if data.leftState then
+    if input.leftState then
         steerInput = steerInput + 1
     end
-    if data.rightState then
+    if input.rightState then
         steerInput = steerInput - 1
     end
 
-    if data.backState and not data.accelState then
+    if input.backState and not input.accelState then
         steerInput = -steerInput
     end
 
@@ -88,7 +89,7 @@ end
 -- Обновление анимации колес
 local function updateWheelRotation()
     local absSpeed = math.abs(data.speedMps)
-    data.isDriving = data.accelState or data.backState -- Нажата ли клавиша газа или заднего хода
+    data.isDriving = input.accelState or input.backState -- Нажата ли клавиша газа или заднего хода
     
     local rotationSpeed = 0
 
@@ -99,7 +100,7 @@ local function updateWheelRotation()
         -- Используем max(1, data.currentGear) для случая, если передача еще не определена
         rotationSpeed = (data.engineRPM * cfg.gearRatio[data.currentGear]) * cfg.RPM_TO_WHEEL_SPEED_FACTOR
 
-        if data.backState and not data.accelState then
+        if input.backState and not input.accelState then
             -- Если нажата только клавиша назад, делаем вращение в 10 раз медленнее
             rotationSpeed = rotationSpeed * cfg.REVERSE_SLOWDOWN_FACTOR
         end
@@ -125,9 +126,9 @@ local function updateWheelRotation()
     local playBackward = false
 
     -- Приоритет управления
-    if data.accelState then
+    if input.accelState then
         playForward = true
-    elseif data.backState then
+    elseif input.backState then
         playBackward = true
     else
         -- Если ничего не нажато — используем скорость
@@ -168,11 +169,15 @@ function Physic.tick()
     data.inVehicle = inVehicle
     data.isVehicleOnGround = onGround
 
-    -- Чтение ввода
-    data.accelState = cfg.ACKEY:isPressed()
-    data.backState = cfg.BKKEY:isPressed()
-    data.leftState = cfg.LFKEY:isPressed()
-    data.rightState = cfg.RTKEY:isPressed()
+    local f = cfg.ACKEY:isPressed()
+    local b = cfg.BKKEY:isPressed()
+    local l = cfg.LFKEY:isPressed()
+    local r = cfg.RTKEY:isPressed()
+
+    if f ~= lastF or b ~= lastB or l ~= lastL or r ~= lastR then
+        pings.inputSync(f, b, l, r)
+        lastF, lastB, lastL, lastR = f, b, l, r
+    end
 
     -- Расчет скорости и ускорения
     local velocity = player:getVelocity()
@@ -205,7 +210,7 @@ function Physic.tick()
             data.engineRPM = cfg.IDLE_RPM
         end
 
-        updateEngine(data.accelState)
+        updateEngine(input.accelState)
         updateSteering()
         updateWheelRotation()
 

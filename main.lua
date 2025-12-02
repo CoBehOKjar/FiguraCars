@@ -7,7 +7,7 @@ local sound = require("core.sound")
 
 
 function events.entity_init()
-    vanilla_model.ALL:setVisible(false)
+    vanilla_model.PLAYER:setVisible(false)
     Driver:setPrimaryTexture("SKIN")
     DriverFP:setPrimaryTexture("SKIN")
 

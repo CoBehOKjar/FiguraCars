@@ -2,7 +2,8 @@ local state = require("state")
 
 local Render = {}
 
-local parts = { "LeftLeg", "RightLeg", "LeftArm", "RightArm", "Body" }
+local driverParts = { "LeftLeg", "RightLeg", "LeftArm", "RightArm", "Body" }
+local armorParts = { "LEGGINGS_BODY", "LEGGINGS_LEFT_LEG", "LEGGINGS_RIGHT_LEG", "BOOTS_LEFT_LEG", "BOOTS_RIGHT_LEG"}
 local segmentRPM = state.Config.MAX_RPM / (#state.Config.RPM_LINE - 1)
 local hasWheel = models.car.F1.WorldRoot.Car.Frame.SteeringWheel ~= nil
 
@@ -50,10 +51,13 @@ function Render.tick()
     renderer:setRenderVehicle(not showCar)
 
     local driverVisible = not showCar
-    for _, part in ipairs(parts) do
+    for _, part in ipairs(driverParts) do
         if Driver[part] then
             Driver[part]:setVisible(driverVisible)
         end
+    end
+    for _, part in ipairs(armorParts) do
+        vanilla_model[part]:setVisible(driverVisible)
     end
     
     if state.Settings.lowCam and state.Data.inVehicle then
