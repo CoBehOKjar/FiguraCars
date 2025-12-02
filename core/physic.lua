@@ -1,5 +1,6 @@
 local state = require("state")
 local sound = require("core.sound")
+local util = require("lib.utilities")
 
 local Physic = {}
 
@@ -155,8 +156,14 @@ end
 -- Главная функция тика физики
 function Physic.tick()
     local vehicle = player:getVehicle()
-    local inVehicle = vehicle ~= nil
+    local inVehicle = false
+    local vehicleType = util.getVehicleType(vehicle)
+    if vehicleType == "boat" then
+        inVehicle = true
+    end
     local onGround = inVehicle and vehicle:isOnGround()
+
+    --print(vehicle, vehicleType, inVehicle)
     
     data.inVehicle = inVehicle
     data.isVehicleOnGround = onGround

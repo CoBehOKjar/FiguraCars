@@ -2,7 +2,9 @@ local state = require("state")
 
 local Render = {}
 
+local parts = { "LeftLeg", "RightLeg", "LeftArm", "RightArm", "Body" }
 local segmentRPM = state.Config.MAX_RPM / (#state.Config.RPM_LINE - 1)
+local hasWheel = models.car.F1.WorldRoot.Car.Frame.SteeringWheel ~= nil
 
 local function updateSpeed()
     local speed = math.floor(math.abs(state.Data.speedMps))
@@ -17,23 +19,23 @@ local function updateSpeed()
     local tensUV = state.Config.SPEED_NUMS[tensDigit + 1]
     local unitsUV = state.Config.SPEED_NUMS[unitsDigit + 1]
 
-    if models.car.F1.WorldRoot.Car.Frame.SteeringWheel then                 --?Applying speed to speedometer
+    if hasWheel then                 --?Applying speed to speedometer
         Tens:setUV(tensUV)
         Units:setUV(unitsUV)
     end
 end
 
 local function updateRPM()
-    local stateIndex = math.floor(state.Data.engineRPM / segmentRPM) + 1
-    local RPMUV = math.max(1, math.min(#state.Config.RPM_LINE, stateIndex))
+    local index = math.floor(state.Data.engineRPM / segmentRPM) + 1
+    index = math.min(math.max(index, 1), #state.Config.RPM_LINE)
 
-    if models.car.F1.WorldRoot.Car.Frame.SteeringWheel then
-        RPM:setUV(state.Config.RPM_LINE[RPMUV])
+    if hasWheel then
+        RPM:setUV(state.Config.RPM_LINE[index])
     end
 end
 
 local function updateGear()
-    if models.car.F1.WorldRoot.Car.Frame.SteeringWheel then
+    if hasWheel then
         Gear:setUV(state.Config.GEAR_LINE[state.Data.currentGear])
     end
 end
@@ -48,15 +50,16 @@ function Render.tick()
     renderer:setRenderVehicle(not showCar)
 
     local driverVisible = not showCar
-    local parts = { "LeftLeg", "RightLeg", "LeftArm", "RightArm", "Body" }
     for _, part in ipairs(parts) do
         if Driver[part] then
             Driver[part]:setVisible(driverVisible)
         end
     end
     
-    if state.Settings.lowCam then
+    if state.Settings.lowCam and state.Data.inVehicle then
         renderer:setCameraPos(0, -0.3, 0)
+    else
+        renderer:setCameraPos(0, 0, 0)
     end
 end
 
