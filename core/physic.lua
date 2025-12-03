@@ -7,51 +7,52 @@ local Physic = {}
 local cfg = state.Config
 local data = state.Data
 local input = state.Input
-local lastF, lastB, lastL, lastR = false, false, false, false
+local obj = state.Objects
+
+local lastF, lastB, lastL, lastR = false, false, false, false   --?Pressed keys in last tick
 
 
--- Вспомогательная функция для плавного изменения значений
+
+--*Function for smooth change of values
 local function smooth(current, target, factor)
     return current + (target - current) * factor
 end
 
 
+--*Stopping wheels.
 local function stopWheels()
-    if cfg.GAS then cfg.GAS:stop() end
-    if cfg.REVERSE then cfg.REVERSE:stop() end
+    if obj.GAS then obj.GAS:stop() end
+    if obj.REVERSE then obj.REVERSE:stop() end
 end
 
 
 
--- Обновление физики двигателя (обороты, передачи)
+--*Update engine RPM and gear
 local function updateEngine(isAccelerating)
-    -- Автоматическое переключение вверх
-    if data.currentGear < 6 and data.engineRPM >= cfg.SHIFT_UP_RPM then
+    --.Gears
+    if data.currentGear < 6 and data.engineRPM >= cfg.SHIFT_UP_RPM then                                                     --?Auto gear up
         data.currentGear = data.currentGear + 1
         data.engineRPM = cfg.SHIFT_UP_TARGET_RPM
     end
 
-    -- Автоматическое переключение вниз
-    -- Используем абсолютное значение скорости для корректного сравнения
-    if data.currentGear > 1 and math.abs(data.speedMps) < cfg.gearShiftDownSpeed[data.currentGear] then
+
+    if data.currentGear > 1 and math.abs(data.speedMps) < cfg.gearShiftDownSpeed[data.currentGear] then                     --?Auto gear down
         local rpmBeforeShift = data.engineRPM
         data.currentGear = data.currentGear - 1
         
-        -- Эмуляция перегазовки
-        if rpmBeforeShift < cfg.SHIFT_DOWN_BLIP_RPM then
+        if rpmBeforeShift < cfg.SHIFT_DOWN_BLIP_RPM then                                                                    --?RPM over gas
             data.engineRPM = math.min(cfg.SHIFT_DOWN_BLIP_RPM, cfg.MAX_RPM)
-            sound.playDownshift(player:getPos())
         end
     end
 
-    -- Расчет оборотов
+
+
+    --.RPM
     if isAccelerating then
-        local rpmIncrease = cfg.RPM_ACCEL_BASE_RATE * (cfg.gearRatio[data.currentGear] / cfg.gearRatio[1])
+        local rpmIncrease = cfg.RPM_ACCEL_BASE_RATE * (cfg.gearRatio[data.currentGear] / cfg.gearRatio[1])          --?Increase RPM when pressed gas
         data.engineRPM = data.engineRPM + rpmIncrease
     else
-        -- Торможение двигателем
-        -- Используем абсолютное значение скорости для расчета целевых оборотов
-        local targetRPM = cfg.IDLE_RPM + (math.abs(data.speedMps) * 50 / cfg.gearRatio[data.currentGear])
+        local targetRPM = cfg.IDLE_RPM + (math.abs(data.speedMps) * 50 / cfg.gearRatio[data.currentGear])           --?Decrease RPM when pressed back or all unpressed
         if data.acceleration < -0.01 and data.engineRPM > targetRPM then
             data.engineRPM = smooth(data.engineRPM, targetRPM, cfg.RPM_DECEL_RATE)
         elseif data.engineRPM > cfg.IDLE_RPM then
@@ -59,175 +60,167 @@ local function updateEngine(isAccelerating)
         end
     end
 
-    -- Ограничители
-    data.engineRPM = math.max(cfg.IDLE_RPM, math.min(cfg.MAX_RPM, data.engineRPM))
+    --.Limiter
+    data.engineRPM = math.max(cfg.IDLE_RPM, math.min(cfg.MAX_RPM, data.engineRPM))                      --?Limiting max and min RPM
 end
 
 
 
--- Обновление рулевого управления
+--*Steering angle and animation update
 local function updateSteering()
-    local steerInput = 0
+    local steerInput = 0    --?-1 Right, +1 Left (idk how and why, but i wont fix it.)
 
+    --.Inputs
     if input.leftState then
-        steerInput = steerInput + 1
-    end
-    if input.rightState then
         steerInput = steerInput - 1
     end
+    if input.rightState then
+        steerInput = steerInput + 1
+    end
 
-    if input.backState and not input.accelState then
+
+    if input.backState and not input.accelState then    --?Reverse steering if move back
         steerInput = -steerInput
     end
 
+
+    --.Math
     local targetAngle = steerInput * cfg.MAX_STEER_ANGLE
-    data.steerAngle = smooth(data.steerAngle, targetAngle, cfg.STEERING_SMOOTHNESS)
+    data.steerAngle = smooth(data.steerAngle, targetAngle, cfg.STEERING_SMOOTHNESS) --?Smooth changing angle
+
+
+    local factor = data.steerAngle / cfg.MAX_STEER_ANGLE        --?Applying steer to model
+    local targetTime = 1.0 + factor
+    obj.STEERING:setTime(targetTime):setSpeed(0):play()
 end
 
 
 
--- Обновление анимации колес
+--*Wheels speed and direction animation uodate
 local function updateWheelRotation()
-    local absSpeed = math.abs(data.speedMps)
-    data.isDriving = input.accelState or input.backState -- Нажата ли клавиша газа или заднего хода
-    
     local rotationSpeed = 0
+    local absSpeed = math.abs(data.speedMps)
+    data.isDriving = input.accelState or input.backState        --?Is pressed gas or back
+    
 
-    if data.isDriving then
-        -- 1. Движение с нажатыми клавишами (зависит от RPM и передачи)
-        
-        -- Скорость колеса пропорциональна RPM * GearRatio
-        -- Используем max(1, data.currentGear) для случая, если передача еще не определена
-        rotationSpeed = (data.engineRPM * cfg.gearRatio[data.currentGear]) * cfg.RPM_TO_WHEEL_SPEED_FACTOR
+    --.Match motion type
+    if data.isDriving then  --?Movement with keys pressed (depending on RPM and gear)
+        rotationSpeed = (data.engineRPM * cfg.gearRatio[data.currentGear]) * cfg.RPM_TO_WHEEL_SPEED_FACTOR  --?Wheel speed is proportional to RPM * GearRatio
 
         if input.backState and not input.accelState then
-            -- Если нажата только клавиша назад, делаем вращение в 10 раз медленнее
-            rotationSpeed = rotationSpeed * cfg.REVERSE_SLOWDOWN_FACTOR
+            rotationSpeed = rotationSpeed * cfg.REVERSE_SLOWDOWN_FACTOR --?If pressed only back - speed down animation
         end
 
-    elseif absSpeed > 0.1 then
-        -- 2. Движение накатом (без нажатых клавиш, зависит от текущей скорости)
+    elseif absSpeed > 0.1 then  --?Inertial motion, when keys unpressed
         rotationSpeed = absSpeed * cfg.COASTING_WHEEL_FACTOR
     end
 
-    -- Если скорость вращения слишком мала, останавливаем анимации и выходим
-    if rotationSpeed < 0.01 then
-        if cfg.GAS then cfg.GAS:stop() end
-        if cfg.REVERSE then cfg.REVERSE:stop() end
+
+    if rotationSpeed < 0.01 then    --?If the rotation speed too low, stop the animations and return
+        if obj.GAS then obj.GAS:stop() end
+        if obj.REVERSE then obj.REVERSE:stop() end
         return
     end
 
-    -- 3. Управление анимациями
-    local animGas = cfg.GAS
-    local animReverse = cfg.REVERSE
-
-    -- Логика для определения направления анимации
-    local playForward = false
+    --.Animation control
+    local playForward = false   --?Rotate directions
     local playBackward = false
 
-    -- Приоритет управления
-    if input.accelState then
+
+    if input.accelState then --?Input priority
         playForward = true
     elseif input.backState then
         playBackward = true
-    else
-        -- Если ничего не нажато — используем скорость
+    else    --?If nothing pressed - use speed
         playForward = data.speedMps < -0.1
         playBackward = data.speedMps > 0.1
     end
 
-    if playForward then 
-        if animGas then 
-            animGas:setSpeed(rotationSpeed)
-            animGas:play()
+
+    if playForward then --?Applying animation speed and direction
+        if obj.GAS then 
+            obj.GAS:setSpeed(rotationSpeed)
+                :play()
         end
-        if animReverse then animReverse:stop() end
+        if obj.REVERSE then obj.REVERSE:stop() end
+
     elseif playBackward then 
-        if animReverse then
-            animReverse:setSpeed(rotationSpeed)
-            animReverse:play()
+        if obj.REVERSE then
+            obj.REVERSE:setSpeed(rotationSpeed)
+                :play()
         end
-        if animGas then animGas:stop() end
+        if obj.GAS then obj.GAS:stop() end
+
     else
         stopWheels()
     end
 end
 
 
--- Главная функция тика физики
+
+--*Main tick function
 function Physic.tick()
-    local vehicle = player:getVehicle()
-    local inVehicle = false
+    --.Initial variables
+    local vehicle = player:getVehicle()                     --?Getting vehicle type
     local vehicleType = util.getVehicleType(vehicle)
-    if vehicleType == "boat" then
-        inVehicle = true
-    end
-    local onGround = inVehicle and vehicle:isOnGround()
 
-    --print(vehicle, vehicleType, inVehicle)
-    
-    data.inVehicle = inVehicle
-    data.isVehicleOnGround = onGround
-
-    local f = cfg.ACKEY:isPressed()
-    local b = cfg.BKKEY:isPressed()
-    local l = cfg.LFKEY:isPressed()
-    local r = cfg.RTKEY:isPressed()
-
-    if f ~= lastF or b ~= lastB or l ~= lastL or r ~= lastR then
-        pings.inputSync(f, b, l, r)
-        lastF, lastB, lastL, lastR = f, b, l, r
-    end
-
-    -- Расчет скорости и ускорения
-    local velocity = player:getVelocity()
-    
-    -- Расчет НАПРАВЛЕННОЙ скорости
-    local yaw = math.rad(player:getBodyYaw())
-    local bodyDir = vec(math.sin(yaw), 0, -math.cos(yaw))
-    local flatVel = vec(velocity.x, 0, velocity.z)
-    
-    -- Cкалярная скорость вдоль направления движения
-    data.speedMps = flatVel:dot(bodyDir) * 20
-    
-    data.acceleration = data.speedMps - data.prevSpeedMps
-
-    
-    if state.Data.inVehicle then
-        cfg.STEERING:setSpeed(0)
-        cfg.STEERING:setTime(1.0)
-        cfg.STEERING:play()
-        models.car.F1:setPos(0, 8, 0)
+    if vehicleType == "boat" then   --?Model can be used only on boat
+        data.inVehicle = true
     else
-        models.car.F1:setPos(0, 0, 0)
-        cfg.STEERING:stop()
+        data.inVehicle = false
     end
 
-    -- Если машина активна, считаем физику
-    if state.Data.inVehicle then
-        if not data.isEngineOn then
-            data.isEngineOn = true
-            data.engineRPM = cfg.IDLE_RPM
+
+    --.Calculating updates
+    if data.inVehicle then
+        local f = obj.ACKEY:isPressed()                         --?Check pressed keys
+        local b = obj.BKKEY:isPressed()
+        local l = obj.LFKEY:isPressed()
+        local r = obj.RTKEY:isPressed()
+        if f ~= lastF or b ~= lastB or l ~= lastL or r ~= lastR then    --?Sync keys states, if changeg from last tick
+            pings.inputSync(f, b, l, r)
+            lastF, lastB, lastL, lastR = f, b, l, r
         end
 
-        updateEngine(input.accelState)
+
+
+        local velocity = player:getVelocity()                   --?Calc speed and acceleration
+        local yaw = math.rad(player:getBodyYaw())               --?Cals directional speed
+        local bodyDir = vec(math.sin(yaw), 0, -math.cos(yaw))
+        local flatVel = vec(velocity.x, 0, velocity.z)
+
+        data.speedMps = flatVel:dot(bodyDir) * 20           --?Scalar velocity along the direction of motion
+        data.acceleration = data.speedMps - data.prevSpeedMps   --?Calc acceleration
+
+
+
+        updateEngine(input.accelState)                  --?Updates
         updateSteering()
         updateWheelRotation()
-
-        -- Применение трансформаций к модели
-        local factor = data.steerAngle / cfg.MAX_STEER_ANGLE
-        local targetTime = 1.0 + -factor
-        cfg.STEERING:setTime(targetTime)
-        
+        models.car.F1:setPos(0, 8, 0)
     else
-        data.isEngineOn = false
+        obj.STEERING:stop()
         data.engineRPM = 0
         stopWheels()
-        end
+
+        models.car.F1:setPos(0, 0, 0)
     end
 
-    -- Сохранение предыдущих значений
-    data.prevSpeedMps = data.speedMps
 
+
+    if data.inVehicle and not data.wasInVehicle then                    --?Sounds update
+        data.engineRPM = cfg.IDLE_RPM
+        sound.playIgnition(player:getPos())
+        sound.startEngine(player:getPos())
+    elseif not data.inVehicle and data.wasInVehicle then
+        sound.stopEngine()
+    end
+    sound.updateEngine(player:getPos())
+
+
+
+    data.wasInVehicle = data.inVehicle
+    data.prevSpeedMps = data.speedMps
+end
 
 return Physic

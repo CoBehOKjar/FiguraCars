@@ -1,4 +1,9 @@
-local state = require("state")
+--TODO Доделать модель и текстуры балида
+--TODO В идеале сделать кресло
+--TODO Добавить звуки
+--TODO Добавить в колесо действий камеру, звук, фпв тело и прочую шляпу
+--TODO Разобраться с отображением фпв
+
 local action_wheel = require("ui.action_wheel")
 local render = require("ui.render")
 local physic = require("core.physic")
@@ -6,6 +11,7 @@ local sound = require("core.sound")
 
 
 
+--*Entity initialization process
 function events.entity_init()
     vanilla_model.PLAYER:setVisible(false)
     Driver:setPrimaryTexture("SKIN")
@@ -17,21 +23,16 @@ end
 
 
 
+--*Tick process
 function events.tick()
     if not player:isLoaded() then return end
     physic.tick()
     render.tick()
-    
-    -- Обновляем звуки (передаем данные из физики)
-    -- sound.tick(
-    --     player:getPos(), 
-    --     state.Data.accelState, 
-    --     state.Data.engineRPM
-    -- )
 end
 
 
 
+--*Render process
 function events.world_render(delta)
     if not player:isLoaded() then return end
     render.render(delta)
