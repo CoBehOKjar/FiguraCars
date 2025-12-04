@@ -1,25 +1,54 @@
+--TODO Доделать текстуры балида
+--TODO Разобраться с отображением фпв
+--TODO кчау
 local state = require("state")
 local action_wheel = require("ui.action_wheel")
+local render = require("ui.render")
 local physic = require("core.physic")
 local sound = require("core.sound")
 
--- Инициализация при загрузке энтити
+local obj = state.Objects
+
+--*Entity initialization process
 function events.entity_init()
+    vanilla_model.PLAYER:setVisible(false)
+    obj.Driver:setPrimaryTexture("SKIN")
+    obj.DriverFP:setPrimaryTexture("SKIN")
+
     action_wheel.init()
     sound.init()
 end
 
--- Основной цикл (20 раз в секунду)
+
+
+--*Tick process
 function events.tick()
-    -- Обновляем физику
+    if not player:isLoaded() then return end
     physic.tick()
-    
-    -- Обновляем звуки (передаем данные из физики)
-    -- sound.tick(
-    --     player:getPos(), 
-    --     state.Data.accelState, 
-    --     state.Data.engineRPM
-    -- )
+    render.tick()
 end
 
--- HUD и партиклы удалены, поэтому events.render и events.post_render отсутствуют.
+
+
+--*Render process
+function events.world_render(delta)
+    if not player:isLoaded() then return end
+    render.render(delta)
+end
+
+
+
+--. Еврейская мудрость
+-- local outfitEnabled = false
+
+-- function pings.setOutfit(state) -- this state is provided by the host
+-- --                  input                 ^
+-- --                  vvvvv                 |
+--     outfitEnabled = state --              |
+-- --  ^^^^^^^^^^^^^                         |
+-- --     output                             |
+-- end--                                     |
+-- --                                        |
+-- action:setOnLeftClick(function()--        |
+--     pings.setOutfit(not outfitEnabled)----+
+-- end)

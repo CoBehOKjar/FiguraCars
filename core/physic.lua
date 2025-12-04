@@ -1,44 +1,58 @@
 local state = require("state")
 local sound = require("core.sound")
+local util = require("lib.utilities")
 
 local Physic = {}
 
--- Локальные ссылки для удобства
 local cfg = state.Config
 local data = state.Data
+local input = state.Input
+local obj = state.Objects
 
--- Вспомогательная функция для плавного изменения значений
+local lastF, lastB, lastL, lastR = false, false, false, false   --?Pressed keys in last tick
+
+
+
+--*Function for smooth change of values
 local function smooth(current, target, factor)
     return current + (target - current) * factor
 end
 
--- Обновление физики двигателя (обороты, передачи)
+
+--*Stopping wheels.
+local function stopWheels()
+    if obj.GAS then obj.GAS:stop() end
+    if obj.REVERSE then obj.REVERSE:stop() end
+end
+
+
+
+--*Update engine RPM and gear
 local function updateEngine(isAccelerating)
-    -- Автоматическое переключение вверх
-    if data.currentGear < 6 and data.engineRPM >= cfg.SHIFT_UP_RPM then
+    --.Gears
+    if data.currentGear < 6 and data.engineRPM >= cfg.SHIFT_UP_RPM then                                                     --?Auto gear up
         data.currentGear = data.currentGear + 1
         data.engineRPM = cfg.SHIFT_UP_TARGET_RPM
     end
 
-    -- Автоматическое переключение вниз
-    if data.currentGear > 1 and data.speedMps < cfg.gearShiftDownSpeed[data.currentGear] then
+
+    if data.currentGear > 1 and math.abs(data.speedMps) < cfg.gearShiftDownSpeed[data.currentGear] then                     --?Auto gear down
         local rpmBeforeShift = data.engineRPM
         data.currentGear = data.currentGear - 1
         
-        -- Эмуляция перегазовки
-        if rpmBeforeShift < cfg.SHIFT_DOWN_BLIP_RPM then
+        if rpmBeforeShift < cfg.SHIFT_DOWN_BLIP_RPM then                                                                    --?RPM over gas
             data.engineRPM = math.min(cfg.SHIFT_DOWN_BLIP_RPM, cfg.MAX_RPM)
-            sound.playDownshift(player:getPos())
         end
     end
 
-    -- Расчет оборотов
+
+
+    --.RPM
     if isAccelerating then
-        local rpmIncrease = cfg.RPM_ACCEL_BASE_RATE * (cfg.gearRatio[data.currentGear] / cfg.gearRatio[1])
+        local rpmIncrease = cfg.RPM_ACCEL_BASE_RATE * (cfg.gearRatio[data.currentGear] / cfg.gearRatio[1])          --?Increase RPM when pressed gas
         data.engineRPM = data.engineRPM + rpmIncrease
     else
-        -- Торможение двигателем
-        local targetRPM = cfg.IDLE_RPM + (data.speedMps * 50 / cfg.gearRatio[data.currentGear])
+        local targetRPM = cfg.IDLE_RPM + (math.abs(data.speedMps) * 50 / cfg.gearRatio[data.currentGear])           --?Decrease RPM when pressed back or all unpressed
         if data.acceleration < -0.01 and data.engineRPM > targetRPM then
             data.engineRPM = smooth(data.engineRPM, targetRPM, cfg.RPM_DECEL_RATE)
         elseif data.engineRPM > cfg.IDLE_RPM then
@@ -46,118 +60,156 @@ local function updateEngine(isAccelerating)
         end
     end
 
-    -- Ограничители
-    data.engineRPM = math.max(cfg.IDLE_RPM, math.min(cfg.MAX_RPM, data.engineRPM))
+    --.Limiter
+    data.engineRPM = math.max(cfg.IDLE_RPM, math.min(cfg.MAX_RPM, data.engineRPM))                      --?Limiting max and min RPM
 end
 
--- Обновление рулевого управления
+
+
+--*Steering angle and animation update
 local function updateSteering()
-    if data.speedMps <= 0.1 then return end
+    local steerInput = 0    --?-1 Left, +1 Right
 
-    local velocity = player:getVelocity()
-    local yaw = math.rad(player:getBodyYaw())
-    local bodyDir = vec(math.sin(yaw), 0, -math.cos(yaw))
-    local rightDir = vec(bodyDir.z, 0, -bodyDir.x)
-    local flatVel = vec(velocity.x, 0, velocity.z)
-    
-    -- Вычисляем боковое скольжение для поворота колес
-    local sidewaysSpeed = flatVel:dot(rightDir)
-    
-    local targetAngle = -math.max(-cfg.MAX_STEER_ANGLE, math.min(cfg.MAX_STEER_ANGLE, sidewaysSpeed * cfg.STEERING_SENSITIVITY))
-    data.steerAngle = targetAngle
-end
-
--- Обновление подвески (вертикальное положение колес)
-local function updateSuspension()
-    local onGround = data.isVehicleOnGround
-    
-    -- Целевые позиции колес (без крена, только вверх/вниз)
-    local targetFR = onGround and cfg.GROUND_WHEEL_Z or -cfg.AIR_WHEEL_Z
-    local targetFL = onGround and -cfg.GROUND_WHEEL_Z or cfg.AIR_WHEEL_Z
-    local targetRL = onGround and cfg.GROUND_WHEEL_Z or -cfg.AIR_WHEEL_Z
-    local targetRR = onGround and -cfg.GROUND_WHEEL_Z or cfg.AIR_WHEEL_Z
-
-    data.wheelZ.FR = smooth(data.wheelZ.FR, targetFR, cfg.WHEEL_Z_SMOOTH)
-    data.wheelZ.FL = smooth(data.wheelZ.FL, targetFL, cfg.WHEEL_Z_SMOOTH)
-    data.wheelZ.RL = smooth(data.wheelZ.RL, targetRL, cfg.WHEEL_Z_SMOOTH)
-    data.wheelZ.RR = smooth(data.wheelZ.RR, targetRR, cfg.WHEEL_Z_SMOOTH)
-end
-
--- Главная функция тика физики
-function Physic.tick()
-    if not player:isLoaded() then return end
-
-    -- Определение состояния игрока и транспорта
-    local vehicle = player:getVehicle()
-    local inVehicle = false
-    local onGround = player:isOnGround()
-
-    if vehicle then
-        -- Простая проверка, сидит ли игрок в лодке/вагонетке
-        inVehicle = true
-        onGround = vehicle:isOnGround()
+    --.Inputs
+    if input.leftState then
+        steerInput = steerInput - 1
     end
-    
-    data.inVehicle = inVehicle
-    data.isVehicleOnGround = onGround
-
-    -- Чтение ввода (газ)
-    local accelKey = keybinds:fromVanilla("key.forward")
-    data.accelState = accelKey:isPressed()
-
-    -- Расчет скорости и ускорения
-    local velocity = player:getVelocity()
-    data.speedMps = velocity:length() * 20
-    data.acceleration = data.speedMps - data.prevSpeedMps
-
-    -- Логика включения/отображения машины
-    local showCar = inVehicle -- Машина видна, только если мы внутри транспорта
-    models.car.F1.Root.Car:setVisible(showCar)
-    renderer:setRenderVehicle(not showCar) -- Скрываем ванильный транспорт
-
-    -- Управление видимостью игрока (сидя в болиде)
-    if showCar then
-        vanilla_model.LEFT_LEG:setVisible(false)
-        vanilla_model.RIGHT_LEG:setVisible(false)
-        -- Позиционирование модели машины (близко к земле для Ф1)
-        models.car.F1.Root.Car:setPos(0, 6, 0)
-        -- Игрок сидит чуть ниже
-        vanilla_model.ALL:setPos(0, -5, 0)
-    else
-        vanilla_model.ALL:setVisible(true)
-        vanilla_model.ALL:setPos(0, 0, 0)
+    if input.rightState then
+        steerInput = steerInput + 1
     end
 
-    -- Если машина активна, считаем физику
-    if showCar then
-        if not data.isEngineOn then
-            data.isEngineOn = true
-            data.engineRPM = cfg.IDLE_RPM
+
+    if input.backState and not input.accelState then    --?Reverse steering if move back
+        steerInput = -steerInput
+    end
+
+
+    --.Math
+    local targetAngle = steerInput * cfg.MAX_STEER_ANGLE
+    data.steerAngle = smooth(data.steerAngle, targetAngle, cfg.STEERING_SMOOTHNESS) --?Smooth changing angle
+
+
+    local factor = data.steerAngle / cfg.MAX_STEER_ANGLE        --?Applying steer to model
+    local targetTime = 1.0 + factor
+    obj.STEERING:setTime(targetTime):setSpeed(0):play()
+end
+
+
+
+--*Wheels speed and direction animation uodate
+local function updateWheelRotation()
+    local rotationSpeed = 0
+    local absSpeed = math.abs(data.speedMps)
+    data.isDriving = input.accelState or input.backState        --?Is pressed gas or back
+    
+
+    --.Match motion type
+    if data.isDriving then  --?Movement with keys pressed (depending on RPM and gear)
+        rotationSpeed = (data.engineRPM * cfg.gearRatio[data.currentGear]) * cfg.RPM_TO_WHEEL_SPEED_FACTOR  --?Wheel speed is proportional to RPM * GearRatio
+
+        if input.backState and not input.accelState then
+            rotationSpeed = rotationSpeed * cfg.REVERSE_SLOWDOWN_FACTOR --?If pressed only back - speed down animation
         end
 
-        updateEngine(data.accelState)
-        updateSteering()
-        updateSuspension()
-
-        -- Применение трансформаций к модели
-        local car = models.car.F1.Root.Car
-        car.WheelFR:setRot(0, data.steerAngle, data.wheelZ.FR)
-        car.WheelFL:setRot(0, data.steerAngle, data.wheelZ.FL)
-        car.WheelBL:setRot(0, 0, -data.wheelZ.RL)
-        car.WheelBR:setRot(0, 0, -data.wheelZ.RR)
-        
-        -- Вращение колес (анимация)
-        local wheelSpeed = data.speedMps * 5 -- Множитель скорости вращения
-        -- Здесь должна быть анимация вращения текстуры или кости, если она есть
-        
-    else
-        data.isEngineOn = false
-        data.engineRPM = 0
+    elseif absSpeed > 0.1 then  --?Inertial motion, when keys unpressed
+        rotationSpeed = absSpeed * cfg.COASTING_WHEEL_FACTOR
     end
 
-    -- Сохранение предыдущих значений
+
+    if rotationSpeed < 0.01 then    --?If the rotation speed too low, stop the animations and return
+        if obj.GAS then obj.GAS:stop() end
+        if obj.REVERSE then obj.REVERSE:stop() end
+        return
+    end
+
+    --.Animation control
+    local playForward = false   --?Rotate directions
+    local playBackward = false
+
+
+    if input.accelState then --?Input priority
+        playForward = true
+    elseif input.backState then
+        playBackward = true
+    else    --?If nothing pressed - use speed
+        playForward = data.speedMps < -0.1
+        playBackward = data.speedMps > 0.1
+    end
+
+
+    if playForward then --?Applying animation speed and direction
+        if obj.GAS then 
+            obj.GAS:setSpeed(rotationSpeed)
+                :play()
+        end
+        if obj.REVERSE then obj.REVERSE:stop() end
+
+    elseif playBackward then 
+        if obj.REVERSE then
+            obj.REVERSE:setSpeed(rotationSpeed)
+                :play()
+        end
+        if obj.GAS then obj.GAS:stop() end
+
+    else
+        stopWheels()
+    end
+end
+
+
+
+--*Main tick function
+function Physic.tick()
+    --.Initial variables
+    local vehicle = player:getVehicle()                     --?Getting vehicle type
+    local vehicleType = util.getVehicleType(vehicle)
+
+    if vehicleType == "boat" and player:getControlledVehicle() then   --?Model can be used only on boat
+        data.inVehicle = true
+    else
+        data.inVehicle = false
+    end
+
+
+    --.Calculating updates
+    if data.inVehicle then
+        local f = obj.ACKEY:isPressed()                         --?Check pressed keys
+        local b = obj.BKKEY:isPressed()
+        local l = obj.LFKEY:isPressed()
+        local r = obj.RTKEY:isPressed()
+        if f ~= lastF or b ~= lastB or l ~= lastL or r ~= lastR then    --?Sync keys states, if changeg from last tick
+            pings.inputSync(f, b, l, r)
+            lastF, lastB, lastL, lastR = f, b, l, r
+        end
+
+
+
+        local velocity = player:getVelocity()                   --?Calc speed and acceleration
+        local yaw = math.rad(player:getBodyYaw())               --?Cals directional speed
+        local bodyDir = vec(math.sin(yaw), 0, -math.cos(yaw))
+        local flatVel = vec(velocity.x, 0, velocity.z)
+
+        data.speedMps = flatVel:dot(bodyDir) * 20           --?Scalar velocity along the direction of motion
+        data.acceleration = data.speedMps - data.prevSpeedMps   --?Calc acceleration
+
+
+
+        updateEngine(input.accelState)                  --?Updates
+        updateSteering()
+        updateWheelRotation()
+        models.car.F1:setPos(0, 8, 0)
+    else
+        obj.STEERING:stop()
+        data.engineRPM = 0
+        stopWheels()
+
+        models.car.F1:setPos(0, 0, 0)
+    end
+
+    sound.tick()
+
+    data.wasInVehicle = data.inVehicle
     data.prevSpeedMps = data.speedMps
-    data.prevEngineRPM = data.engineRPM
 end
 
 return Physic

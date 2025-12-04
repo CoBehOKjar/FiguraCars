@@ -1,31 +1,94 @@
 local State = {}
 
--- --- Константы настройки (Config) ---
 
--- Настройки двигателя и трансмиссии
+--*Objects
+State.Objects = {
+    Driver = models.car.F1.Driver,                                                   --?Driver model
+    DriverFP = models.car.F1.WorldRoot.DriverFP,                                     --?Driver model for firs person render
+    F1 = models.car.F1.WorldRoot,                                                    --?Car model
+    Tens = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUITens,      --?Speedometer tens display part
+    Units = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIUnits,    --?Speedometer units display part
+    Gear = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIGear,      --?Speedometer gear display part
+    RPM = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIRPM,        --?Speedometer RPM display part
+
+    --?Input keys
+    ACKEY = keybinds:fromVanilla("key.forward"),
+    BKKEY = keybinds:fromVanilla("key.back"),
+    LFKEY = keybinds:fromVanilla("key.left"),
+    RTKEY = keybinds:fromVanilla("key.right"),
+
+    --?Animations path
+    GAS = animations["car.F1"].Gas,
+    REVERSE = animations["car.F1"].Reverse,
+    STEERING = animations["car.F1"].Steering,
+
+    AW = {}
+}
+
+
+--*Const
 State.Config = {
-    IDLE_RPM = 800,               -- Холостые обороты
-    MAX_RPM = 12000,              -- Максимальные обороты (повышено для Ф1)
-    RPM_ACCEL_BASE_RATE = 250,    -- Скорость набора оборотов
-    RPM_DECEL_RATE = 0.15,        -- Скорость сброса оборотов
-    
-    -- Обороты переключения передач
-    SHIFT_UP_RPM = 11500,         -- Переключение вверх
-    SHIFT_UP_TARGET_RPM = 7000,   -- Обороты после переключения вверх
-    SHIFT_DOWN_BLIP_RPM = 9000,   -- Подгазовка при понижении
+    --?Numbers UV coordinates for speedometer
+    SPEED_UV = {
+        vec(123/128,40/128),
+        vec(123/128,45/128),
+        vec(123/128,50/128),
+        vec(123/128,55/128),
+        vec(123/128,60/128),
+        vec(123/128,65/128),
+        vec(123/128,70/128),
+        vec(123/128,75/128),
+        vec(123/128,80/128),
+        vec(123/128,85/128)
+    },
 
-    -- Скорости для автоматического понижения передачи (м/с)
-    gearShiftDownSpeed = {
+    --?RPM scale UV coordinates for speedometer
+    RPM_UV = {
+        vec(113/128,40/128),
+        vec(113/128,41/128),
+        vec(113/128,42/128),
+        vec(113/128,43/128),
+        vec(113/128,44/128),
+        vec(113/128,45/128),
+        vec(113/128,46/128),
+        vec(113/128,47/128),
+        vec(113/128,48/128),
+        vec(113/128,49/128),
+        vec(113/128,50/128)
+    },
+
+    --?Gears indicator UV coordinates for speedometer
+    GEAR_UV = {
+        vec(113/128,51/128),
+        vec(113/128,52/128),
+        vec(113/128,53/128),
+        vec(113/128,54/128),
+        vec(113/128,55/128),
+        vec(113/128,56/128)
+    },
+
+    --.RPM const
+    IDLE_RPM = 800,                     --?RPM when idle
+    MAX_RPM = 12000,                    --?RPM up limit
+    RPM_ACCEL_BASE_RATE = 250,          --?RPM acceleration speed
+    RPM_DECEL_RATE = 0.15,              --?RPM deceleration speed
+    RPM_TO_WHEEL_SPEED_FACTOR = 0.0005, --?RPM to wheels rotation speed multipler
+    COASTING_WHEEL_FACTOR = 0.1,        --?Multipler wheels rotation, when gas unpressed
+    REVERSE_SLOWDOWN_FACTOR = 0.5,      --?Wheels animation speed multiplier when reversing
+    
+    --.Gear changing RPM
+    SHIFT_UP_RPM = 11500,               --?Gear shift up RPM
+    SHIFT_UP_TARGET_RPM = 7000,         --?RPM after gear shift up
+    SHIFT_DOWN_BLIP_RPM = 9000,         --?Gas afted gear shift down
+    gearShiftDownSpeed = {              --?Speed for gear shit down
         [1] = 0,
         [2] = 10,
         [3] = 20,
         [4] = 35,
         [5] = 50,
-        [6] = 70 -- Добавлена 6 передача для Ф1
+        [6] = 70
     },
-
-    -- Передаточные числа
-    gearRatio = {
+    gearRatio = {                       --?Gear ratios
         [1] = 4.5,
         [2] = 3.2,
         [3] = 2.4,
@@ -34,42 +97,46 @@ State.Config = {
         [6] = 1.1
     },
 
-    -- Рулевое управление
-    STEERING_SENSITIVITY = 45,
-    MAX_STEER_ANGLE = 45, -- Уменьшен угол для Ф1
+    --.Steering config
+    STEERING_SMOOTHNESS = 0.1,          --?Smoothness for steering animation
+    MAX_STEER_ANGLE = 18,               --?Max frames for one side
 
-    -- Подвеска (настроена жестче для Ф1)
-    AIR_WHEEL_Z = 6,
-    GROUND_WHEEL_Z = 8,
-    WHEEL_Z_SMOOTH = 0.8, -- Более резкая реакция подвески
+    --.Sounds
+    CAM_MAX_HEIG = 0.5,
+    CAM_MIN_HEIG = -0.9,    
 }
 
--- --- Переменные состояния (Runtime Data) ---
 
+--*Runtime
 State.Data = {
-    engineRPM = 0,
-    prevEngineRPM = 0,
-    currentGear = 1,
-    isEngineOn = false,
+    --.Car states
+    engineRPM = 0,          --?Current RPM
+    prevEngineRPM = 0,      --?RPM in last tick
+    currentGear = 1,        --?Current gear
     
-    speedMps = 0,        -- Скорость в м/с
-    prevSpeedMps = 0,
-    acceleration = 0,
+    speedMps = 0,           --?Current speed
+    prevSpeedMps = 0,       --?Speed in last tick
+    acceleration = 0,       --?Current acceleration
     
-    steerAngle = 0,      -- Угол поворота колес
-    
-    -- Состояние подвески колес
-    wheelZ = {
-        FR = 8,
-        FL = -8,
-        RL = 8,
-        RR = -8
-    },
+    steerAngle = 0,         --?Current steer angle
 
-    -- Флаги состояния игрока/машины
-    inVehicle = false,
-    isVehicleOnGround = false,
-    accelState = false   -- Нажат ли газ
+    --.Driver states
+    inVehicle = false,      --?Is player sit in wehicle
+    wasInVehicle = false,   --?Is player sitting in wehicle on last tick
+    isDriving = false       --?Is now pressed gas or back
+}
+
+State.Input = {
+    --.Current keys pressed
+    accelState = false, --?Froward  (W)
+    backState = false,  --?Backward (S)
+    leftState = false,  --?Left     (A)
+    rightState = false  --?Right    (D)
+}
+
+State.Settings = {
+    --.Any seetings for action wheel
+    camHeight = -0.3,   --?Camera height in car
 }
 
 return State
