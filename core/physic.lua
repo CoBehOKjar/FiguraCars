@@ -68,7 +68,7 @@ end
 
 --*Steering angle and animation update
 local function updateSteering()
-    local steerInput = 0    --?-1 Right, +1 Left (idk how and why, but i wont fix it.)
+    local steerInput = 0    --?-1 Left, +1 Right
 
     --.Inputs
     if input.leftState then
@@ -164,7 +164,7 @@ function Physic.tick()
     local vehicle = player:getVehicle()                     --?Getting vehicle type
     local vehicleType = util.getVehicleType(vehicle)
 
-    if vehicleType == "boat" then   --?Model can be used only on boat
+    if vehicleType == "boat" and player:getControlledVehicle() then   --?Model can be used only on boat
         data.inVehicle = true
     else
         data.inVehicle = false
@@ -206,18 +206,7 @@ function Physic.tick()
         models.car.F1:setPos(0, 0, 0)
     end
 
-
-
-    if data.inVehicle and not data.wasInVehicle then                    --?Sounds update
-        data.engineRPM = cfg.IDLE_RPM
-        sound.playIgnition(player:getPos())
-        sound.startEngine(player:getPos())
-    elseif not data.inVehicle and data.wasInVehicle then
-        sound.stopEngine()
-    end
-    sound.updateEngine(player:getPos())
-
-
+    sound.tick()
 
     data.wasInVehicle = data.inVehicle
     data.prevSpeedMps = data.speedMps

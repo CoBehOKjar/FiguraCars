@@ -1,21 +1,20 @@
 --TODO Доделать модель и текстуры балида
 --TODO В идеале сделать кресло
---TODO Добавить звуки
 --TODO Добавить в колесо действий камеру, звук, фпв тело и прочую шляпу
 --TODO Разобраться с отображением фпв
-
+local state = require("state")
 local action_wheel = require("ui.action_wheel")
 local render = require("ui.render")
 local physic = require("core.physic")
 local sound = require("core.sound")
 
-
+local obj = state.Objects
 
 --*Entity initialization process
 function events.entity_init()
     vanilla_model.PLAYER:setVisible(false)
-    Driver:setPrimaryTexture("SKIN")
-    DriverFP:setPrimaryTexture("SKIN")
+    obj.Driver:setPrimaryTexture("SKIN")
+    obj.DriverFP:setPrimaryTexture("SKIN")
 
     action_wheel.init()
     sound.init()

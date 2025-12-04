@@ -2,6 +2,8 @@ local state = require("state")
 
 local Render = {}
 
+local obj = state.Objects
+
 local driverParts = { "LeftLeg", "RightLeg", "LeftArm", "RightArm", "Body" }                                            --?Parts of model for hidding, when in car
 local armorParts = { "LEGGINGS_BODY", "LEGGINGS_LEFT_LEG", "LEGGINGS_RIGHT_LEG", "BOOTS_LEFT_LEG", "BOOTS_RIGHT_LEG"}   --?Parts of vanilla armor for hidding, when in car
 local segmentRPM = state.Config.MAX_RPM / (#state.Config.RPM_UV - 1)        --?RPM in one pixel of indicator on steering wheel
@@ -24,8 +26,8 @@ local function updateSpeed()
     local unitsUV = state.Config.SPEED_UV[unitsDigit + 1]
 
     if hasWheel then                                                        --?Applying speed to speedometer
-        Tens:setUV(tensUV)
-        Units:setUV(unitsUV)
+        obj.Tens:setUV(tensUV)
+        obj.Units:setUV(unitsUV)
     end
 end
 
@@ -36,7 +38,7 @@ local function updateRPM()
     index = math.min(math.max(index, 1), #state.Config.RPM_UV)
 
     if hasWheel then
-        RPM:setUV(state.Config.RPM_UV[index])
+        obj.RPM:setUV(state.Config.RPM_UV[index])
     end
 end
 
@@ -44,7 +46,7 @@ end
 --*Updating Gear on speedometer
 local function updateGear()
     if hasWheel then
-        Gear:setUV(state.Config.GEAR_UV[state.Data.currentGear])
+        obj.Gear:setUV(state.Config.GEAR_UV[state.Data.currentGear])
     end
 end
 
@@ -59,13 +61,13 @@ function Render.tick()
 
 
     --.Model parts visibility update
-    F1:setVisible(state.Data.inVehicle)                 --?Show car
+    obj.F1:setVisible(state.Data.inVehicle)                 --?Show car
     renderer:setRenderVehicle(not state.Data.inVehicle) --?And hide boat
 
     local driverVisible = not state.Data.inVehicle      --?Hidding parts of model that extend beyond the textures
     for _, part in ipairs(driverParts) do
-        if Driver[part] then
-            Driver[part]:setVisible(driverVisible)
+        if obj.Driver[part] then
+            obj.Driver[part]:setVisible(driverVisible)
         end
     end
     for _, part in ipairs(armorParts) do                --?Hidding parts of vanilla armor that extend beyond the textures
@@ -86,7 +88,7 @@ end
 --*Rendering car in player position
 function Render.render(delta)
     local pos = player:getPos(delta)*16
-    F1:setPos(pos[1], pos[2]+7, pos[3]) --?+7 because player is under the block the boat is on
+    obj.F1:setPos(pos[1], pos[2]+7, pos[3]) --?+7 because player is under the block the boat is on
         :setRot(0,-player:getBodyYaw(delta)-180,0)
 end
 

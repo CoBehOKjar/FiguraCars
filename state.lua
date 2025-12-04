@@ -2,15 +2,15 @@ local State = {}
 
 
 --*Objects
-Driver = models.car.F1.Driver                                                   --?Driver model
-DriverFP = models.car.F1.WorldRoot.DriverFP                                     --?Driver model for firs person render
-F1 = models.car.F1.WorldRoot                                                    --?Car model
-Tens = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUITens      --?Speedometer tens display part
-Units = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIUnits    --?Speedometer units display part
-Gear = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIGear      --?Speedometer gear display part
-RPM = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIRPM        --?Speedometer RPM display part
-
 State.Objects = {
+    Driver = models.car.F1.Driver,                                                   --?Driver model
+    DriverFP = models.car.F1.WorldRoot.DriverFP,                                     --?Driver model for firs person render
+    F1 = models.car.F1.WorldRoot,                                                    --?Car model
+    Tens = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUITens,      --?Speedometer tens display part
+    Units = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIUnits,    --?Speedometer units display part
+    Gear = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIGear,      --?Speedometer gear display part
+    RPM = models.car.F1.WorldRoot.Car.Frame.SteeringWheel.SteeringWheelUIRPM,        --?Speedometer RPM display part
+
     --?Input keys
     ACKEY = keybinds:fromVanilla("key.forward"),
     BKKEY = keybinds:fromVanilla("key.back"),
@@ -70,8 +70,8 @@ State.Config = {
     MAX_RPM = 12000,                    --?RPM up limit
     RPM_ACCEL_BASE_RATE = 250,          --?RPM acceleration speed
     RPM_DECEL_RATE = 0.15,              --?RPM deceleration speed
-    RPM_TO_WHEEL_SPEED_FACTOR = 0.0005, --TODO добавить описание
-    COASTING_WHEEL_FACTOR = 0.1,        --TODO добавить описание
+    RPM_TO_WHEEL_SPEED_FACTOR = 0.0005, --?RPM to wheels rotation speed multipler
+    COASTING_WHEEL_FACTOR = 0.1,        --?Multipler wheels rotation, when gas unpressed
     REVERSE_SLOWDOWN_FACTOR = 0.5,      --?Wheels animation speed multiplier when reversing
     
     --.Gear changing RPM
@@ -108,7 +108,7 @@ State.Data = {
     prevEngineRPM = 0,      --?RPM in last tick
     currentGear = 1,        --?Current gear
     
-    speedMps = 0,           --?Current speed in m|s or blocks per second
+    speedMps = 0,           --?Current speed
     prevSpeedMps = 0,       --?Speed in last tick
     acceleration = 0,       --?Current acceleration
     

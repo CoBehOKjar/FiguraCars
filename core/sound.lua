@@ -2,6 +2,9 @@ local state = require("state")
 
 local Sound = {}
 
+local cfg = state.Config
+local data = state.Data
+
 local engineLoop = sounds["car.EngineLoop"]     --?Sounds path
 local ignitionSound = sounds["car.Ignition"]
 
@@ -20,15 +23,21 @@ local function smooth(a, b, k)
 end
 
 
---*Set loop to engine sound on initialization
-function Sound.init()
-    engineLoop:setLoop(true)
-end
-
 --*Stop engine sound
 function Sound.stopEngine()
     fadeOutActive = true
 end
+
+--*For immedantly stop
+function Sound.forceStop()
+    if isEnginePlaying then
+        engineLoop:stop()
+        isEnginePlaying = false
+        fadeOutActive = false
+        currentVolume = 0
+    end
+end
+
 
 
 --*Play ignition sound, when you sit in vehicle
@@ -59,17 +68,38 @@ end
 
 --*Engine sound properties update
 function Sound.updateEngine(pos)
-    if not engineLoop then return end
     engineLoop:setPos(pos)  --?Updating position
 
 
-    local norm = (state.Data.engineRPM - state.Config.IDLE_RPM) / (state.Config.MAX_RPM - state.Config.IDLE_RPM)
+    local norm = (data.engineRPM - cfg.IDLE_RPM) / (cfg.MAX_RPM - cfg.IDLE_RPM)
     targetPitch = 0.8 + norm * 1.2                                  --?Set the pitch depending on the RPM
+
+
+    if not host:isHost() then   --?Doppler effect for other players
+        local vel = player:getVelocity()
+        local viewer = client:getViewer()
+        local viewerPos = viewer:getPos()
+        local viewerVel = viewer:getVelocity()
+
+        local dirVec = viewerPos - pos
+        local dist = dirVec:length()
+        local dir = vec(0,0,0)
+        if dist > 0 then dir = dirVec / dist end
+
+        local rel = (vel - viewerVel):dot(dir)
+        local dopplerScale = 10.0
+
+        local dopplerFactor = 1 + (rel / dopplerScale)
+        dopplerFactor = math.max(0.8, math.min(1.2, dopplerFactor))
+
+        targetPitch = targetPitch * dopplerFactor
+    end
+
     currentPitch = smooth(currentPitch, targetPitch, 0.2)
     engineLoop:setPitch(currentPitch)
 
 
-    if fadeOutActive then   --?Smooth stop engine sound, when exit from vehicle
+    if fadeOutActive then   --?Engine fade out when exit from car
         currentVolume = currentVolume - fadeSpeed
         if currentVolume <= 0 then
             currentVolume = 0
@@ -77,11 +107,31 @@ function Sound.updateEngine(pos)
             isEnginePlaying = false
             engineLoop:stop()
             return
-        end
-        engineLoop:setVolume(currentVolume)
-    else
-        engineLoop:setVolume(1)
+        end 
     end
+    engineLoop:setVolume(currentVolume)
 end
 
+
+
+--*Set loop to engine sound on initialization
+function Sound.init()
+    engineLoop:setLoop(true)
+    engineLoop:setAttenuation(5)
+end
+
+
+
+--*Main tick function
+function Sound.tick()
+    if data.inVehicle and not data.wasInVehicle then
+        data.engineRPM = cfg.IDLE_RPM
+        Sound.playIgnition(player:getPos())
+        Sound.startEngine(player:getPos())
+
+    elseif not data.inVehicle and data.wasInVehicle then
+        Sound.stopEngine()
+    end
+    Sound.updateEngine(player:getPos())
+end
 return Sound
