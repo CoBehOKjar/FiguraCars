@@ -1,7 +1,6 @@
---TODO Доделать модель и текстуры балида
---TODO В идеале сделать кресло
---TODO Добавить в колесо действий камеру, звук, фпв тело и прочую шляпу
+--TODO Доделать текстуры балида
 --TODO Разобраться с отображением фпв
+--TODO кчау
 local state = require("state")
 local action_wheel = require("ui.action_wheel")
 local render = require("ui.render")

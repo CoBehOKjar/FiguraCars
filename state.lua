@@ -21,6 +21,8 @@ State.Objects = {
     GAS = animations["car.F1"].Gas,
     REVERSE = animations["car.F1"].Reverse,
     STEERING = animations["car.F1"].Steering,
+
+    AW = {}
 }
 
 
@@ -98,6 +100,10 @@ State.Config = {
     --.Steering config
     STEERING_SMOOTHNESS = 0.1,          --?Smoothness for steering animation
     MAX_STEER_ANGLE = 18,               --?Max frames for one side
+
+    --.Sounds
+    CAM_MAX_HEIG = 0.5,
+    CAM_MIN_HEIG = -0.9,    
 }
 
 
