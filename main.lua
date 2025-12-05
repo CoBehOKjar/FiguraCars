@@ -1,5 +1,5 @@
---TODO Доделать текстуры балида
 --TODO Разобраться с отображением фпв
+--TODO Разобраться со звуком при ливе
 --TODO кчау
 local state = require("state")
 local action_wheel = require("ui.action_wheel")
