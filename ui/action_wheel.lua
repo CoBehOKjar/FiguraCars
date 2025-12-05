@@ -1,10 +1,12 @@
 local state = require("state")
+local stopwatch = require("lib.stopwatch")
 
 local ActionWheel = {}
 
 local cfg = state.Config
 local obj = state.Objects
 local stgs = state.Settings
+local data = state.Data
 
 function ActionWheel.titleUpdate(action, title)
     action:setTitle(title)
@@ -43,6 +45,28 @@ function ActionWheel.init()
         :item("minecraft:observer")
         :setOnScroll(ActionWheel.setCamHeight)
     obj.AW.camHeight = camHeight
+
+    local setBox = wheels[1]:newAction()
+        :title("Выбрать зону секундомера")
+        :item("minecraft:wooden_axe")
+        :onLeftClick(function() stopwatch.setBox(1, player:getPos()) end)
+        :onRightClick(function() stopwatch.setBox(2, player:getPos()) end)
+    obj.AW.camHeight = setBox
+
+    local toggleStopwatch = wheels[1]:newAction()
+        :title("Запустить/остановить секундомер")
+        :item("minecraft:clock")
+        :onLeftClick(function()
+            data.isClocking = true
+            print("Таймер запущен")
+        end)
+        :onRightClick(function()
+            data.isClocking = false
+            data.currentTime = 0
+            data.lastTime = 0
+            print("Таймер остановлен")
+        end)
+    obj.AW.camHeight = toggleStopwatch
 end
 
 

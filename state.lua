@@ -129,7 +129,18 @@ State.Data = {
     --.Driver states
     inVehicle = false,      --?Is player sit in wehicle
     wasInVehicle = false,   --?Is player sitting in wehicle on last tick
-    isDriving = false       --?Is now pressed gas or back
+    isDriving = false,      --?Is now pressed gas or back
+
+    --.Stopwatch states
+    isClocking = false,
+    currentTime = 0,
+    currentLap = 0,
+    lastTime = 0,
+    
+
+    checkBox = {vec(0,0,0), vec(0,0,0)},
+    inCheckBox = false,
+    wasInCheckBox = false,
 }
 
 State.Input = {

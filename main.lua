@@ -2,10 +2,12 @@
 --TODO Разобраться со звуком при ливе
 --TODO кчау
 local state = require("state")
+local stopwatch = require("lib.stopwatch")
 local action_wheel = require("ui.action_wheel")
 local render = require("ui.render")
 local physic = require("core.physic")
 local sound = require("core.sound")
+
 
 local obj = state.Objects
 
@@ -26,6 +28,7 @@ function events.tick()
     if not player:isLoaded() then return end
     physic.tick()
     render.tick()
+    stopwatch.tick()
 end
 
 
