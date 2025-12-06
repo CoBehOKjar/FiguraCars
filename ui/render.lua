@@ -2,11 +2,14 @@ local state = require("state")
 
 local Render = {}
 
+local cfg = state.Config
+local data = state.Data
 local obj = state.Objects
+local stgs = state.Settings
 
 local driverParts = { "LeftLeg", "RightLeg", "LeftArm", "RightArm", "Body" }                                            --?Parts of model for hidding, when in car
 local armorParts = { "LEGGINGS_BODY", "LEGGINGS_LEFT_LEG", "LEGGINGS_RIGHT_LEG", "BOOTS_LEFT_LEG", "BOOTS_RIGHT_LEG"}   --?Parts of vanilla armor for hidding, when in car
-local segmentRPM = state.Config.MAX_RPM / (#state.Config.RPM_UV - 1)        --?RPM in one pixel of indicator on steering wheel
+local segmentRPM = cfg.MAX_RPM / (#cfg.RPM_UV - 1)        --?RPM in one pixel of indicator on steering wheel
 local hasWheel = models.car.F1.WorldRoot.Car.Frame.SteeringWheel ~= nil     --?Check, what steering wheel exist
 
 
@@ -22,8 +25,8 @@ local function updateSpeed()
     local tensDigit = math.floor(speed / 10)                    --?Calculating tens and units for display speed
     local unitsDigit = speed % 10
 
-    local tensUV = state.Config.SPEED_UV[tensDigit + 1]
-    local unitsUV = state.Config.SPEED_UV[unitsDigit + 1]
+    local tensUV = cfg.SPEED_UV[tensDigit + 1]
+    local unitsUV = cfg.SPEED_UV[unitsDigit + 1]
 
     if hasWheel then                                                        --?Applying speed to speedometer
         obj.Tens:setUV(tensUV)
@@ -34,11 +37,11 @@ end
 
 --*Updating RPM on speedometer
 local function updateRPM()
-    local index = math.floor(state.Data.engineRPM / segmentRPM) + 1
-    index = math.min(math.max(index, 1), #state.Config.RPM_UV)
+    local index = math.floor(data.engineRPM / segmentRPM) + 1
+    index = math.min(math.max(index, 1), #cfg.RPM_UV)
 
     if hasWheel then
-        obj.RPM:setUV(state.Config.RPM_UV[index])
+        obj.RPM:setUV(cfg.RPM_UV[index])
     end
 end
 
@@ -46,8 +49,53 @@ end
 --*Updating Gear on speedometer
 local function updateGear()
     if hasWheel then
-        obj.Gear:setUV(state.Config.GEAR_UV[state.Data.currentGear])
+        obj.Gear:setUV(cfg.GEAR_UV[data.currentGear])
     end
+end
+
+
+
+function Render.spawnEdgeParticles(p1, p2)
+    local x1, y1, z1 = p1.x, p1.y, p1.z
+    local x2, y2, z2 = p2.x, p2.y, p2.z
+
+    local function line(xa, ya, za, xb, yb, zb)
+        local dx = xb - xa
+        local dy = yb - ya
+        local dz = zb - za
+
+        local steps = math.max(math.abs(dx), math.abs(dy), math.abs(dz))
+        if steps < 1 then steps = 1 end
+
+        local sx = dx / steps
+        local sy = dy / steps
+        local sz = dz / steps
+
+        for i = 0, steps do
+            particles["minecraft:crit"]
+                :spawn()
+                :setPos(vec(
+                    xa + sx * i,
+                    ya + sy * i,
+                    za + sz * i
+                ))
+        end
+    end
+
+    line(x1, y1, z1, x1, y2, z1)
+    line(x2, y1, z1, x2, y2, z1)
+    line(x1, y1, z2, x1, y2, z2)
+    line(x2, y1, z2, x2, y2, z2)
+
+    line(x1, y1, z1, x2, y1, z1)
+    line(x1, y1, z1, x1, y1, z2)
+    line(x2, y1, z1, x2, y1, z2)
+    line(x1, y1, z2, x2, y1, z2)
+
+    line(x1, y2, z1, x2, y2, z1)
+    line(x1, y2, z1, x1, y2, z2)
+    line(x2, y2, z1, x2, y2, z2)
+    line(x1, y2, z2, x2, y2, z2)
 end
 
 
@@ -61,10 +109,10 @@ function Render.tick()
 
 
     --.Model parts visibility update
-    obj.F1:setVisible(state.Data.inVehicle)                 --?Show car
-    renderer:setRenderVehicle(not state.Data.inVehicle) --?And hide boat
+    obj.F1:setVisible(data.inVehicle)                 --?Show car
+    renderer:setRenderVehicle(not data.inVehicle) --?And hide boat
 
-    local driverVisible = not state.Data.inVehicle      --?Hidding parts of model that extend beyond the textures
+    local driverVisible = not data.inVehicle      --?Hidding parts of model that extend beyond the textures
     for _, part in ipairs(driverParts) do
         if obj.Driver[part] then
             obj.Driver[part]:setVisible(driverVisible)
@@ -77,12 +125,13 @@ function Render.tick()
     
 
     --.Camera position update
-    if state.Data.inVehicle then    --?Set camera height, what needed, when in car
-        renderer:setCameraPos(0, state.Settings.camHeight, 0)
+    if data.inVehicle then    --?Set camera height, what needed, when in car
+        renderer:setCameraPos(0, stgs.camHeight, 0)
     else
         renderer:setCameraPos(0, 0, 0)
     end
 end
+
 
 
 --*Rendering car in player position

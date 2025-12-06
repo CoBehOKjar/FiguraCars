@@ -17,6 +17,10 @@ State.Objects = {
     LFKEY = keybinds:fromVanilla("key.left"),
     RTKEY = keybinds:fromVanilla("key.right"),
 
+    ALTKEY = keybinds:newKeybind("ResetBox", "key.keyboard.left.alt"),
+    CTRLKEY = keybinds:newKeybind("ResetBox", "key.keyboard.left.control"),
+    SHIFTKEY = keybinds:newKeybind("ResetBox", "key.keyboard.left.shift"),
+
     --?Animations path
     GAS = animations["car.F1"].Gas,
     REVERSE = animations["car.F1"].Reverse,
@@ -64,14 +68,16 @@ State.Config = {
         vec(113/128,53/128),
         vec(113/128,54/128),
         vec(113/128,55/128),
-        vec(113/128,56/128)
+        vec(113/128,56/128),
+        vec(113/128,57/128),
+        vec(113/128,58/128)
     },
 
     --.RPM const
-    IDLE_RPM = 800,                     --?RPM when idle
-    MAX_RPM = 12000,                    --?RPM up limit
-    RPM_ACCEL_BASE_RATE = 250,          --?RPM acceleration speed
-    RPM_DECEL_RATE = 0.15,              --?RPM deceleration speed
+    IDLE_RPM = 4000,                    --?RPM when idle
+    MAX_RPM = 13000,                    --?RPM up limit
+    RPM_ACCEL_BASE_RATE = 300,          --?RPM acceleration speed
+    RPM_DECEL_RATE = 0.3,               --?RPM deceleration speed
     RPM_TO_WHEEL_SPEED_FACTOR = 0.0005, --?RPM to wheels rotation speed multipler
     COASTING_WHEEL_FACTOR = 0.1,        --?Multipler wheels rotation, when gas unpressed
     REVERSE_SLOWDOWN_FACTOR = 0.5,      --?Wheels animation speed multiplier when reversing
@@ -84,17 +90,21 @@ State.Config = {
         [1] = 0,
         [2] = 10,
         [3] = 20,
-        [4] = 35,
-        [5] = 50,
-        [6] = 70
+        [4] = 30,
+        [5] = 40,
+        [6] = 50,
+        [7] = 60,
+        [8] = 70
     },
     gearRatio = {                       --?Gear ratios
         [1] = 4.5,
         [2] = 3.2,
         [3] = 2.4,
-        [4] = 1.8,
-        [5] = 1.4,
-        [6] = 1.1
+        [4] = 1.9,
+        [5] = 1.5,
+        [6] = 1.2,
+        [7] = 1.0,
+        [8] = 0.9
     },
 
     --.Steering config
@@ -123,7 +133,21 @@ State.Data = {
     --.Driver states
     inVehicle = false,      --?Is player sit in wehicle
     wasInVehicle = false,   --?Is player sitting in wehicle on last tick
-    isDriving = false       --?Is now pressed gas or back
+    isDriving = false,      --?Is now pressed gas or back
+
+    --.Stopwatch states
+    isClocking = false,
+    currentTime = 0,
+    currentLap = 0,
+    lastTime = 0,
+    
+
+    checkBox = {vec(0,0,0), vec(0,0,0)},
+    isCheckBoxCreated = false,
+    inCheckBox = false,
+    wasInCheckBox = false,
+
+    renderBox = false
 }
 
 State.Input = {
