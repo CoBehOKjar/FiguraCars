@@ -41,20 +41,31 @@ function ActionWheel.init()
 
     --.Adding buttons
     local camHeight = wheels[1]:newAction()
-        :title("Высота камеры: "..stgs.camHeight)
+        :title("Высота камеры: "..stgs.camHeight.."\n§6Скролл")
         :item("minecraft:observer")
         :setOnScroll(ActionWheel.setCamHeight)
     obj.AW.camHeight = camHeight
 
     local setBox = wheels[1]:newAction()
-        :title("Выбрать зону секундомера")
+        :title(
+            "Выбрать зону секундомера\n" ..
+            "§7ПКМ/ЛКМ§f - Выбор углов\n" ..
+            "§6Скролл§f - Выбрать зону 3х3 вокруг себя\n" ..
+            "§6Скролл§f - Изменить размер вдоль оси взгляда\n" ..
+            "§aShift§f+§6скролл§f - Изменить размер в сторону взгляда\n" ..
+            "§eCtrl§f+§6скролл§f - Изменить размер во все стороны\n" ..
+            "§9Alt§f+§6скролл§d - Сбросить выделение\n" ..
+            "§eCtrl§f+§aShift§f+§6скролл§c - Удалить выделение"
+        )
+
         :item("minecraft:wooden_axe")
-        :onLeftClick(function() stopwatch.setBox(1, player:getPos()) end)
-        :onRightClick(function() stopwatch.setBox(2, player:getPos()) end)
+        :onLeftClick(function() stopwatch.setBox(1, player:getPos(), true) end)
+        :onRightClick(function() stopwatch.setBox(2, player:getPos(), true) end)
+        :onScroll(stopwatch.changeBox)
     obj.AW.camHeight = setBox
 
     local toggleStopwatch = wheels[1]:newAction()
-        :title("Запустить/остановить секундомер")
+        :title("Запустить/остановить секундомер\n§7ЛКМ/ПКМ")
         :item("minecraft:clock")
         :onLeftClick(function()
             data.isClocking = true

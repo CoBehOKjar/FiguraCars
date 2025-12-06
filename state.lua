@@ -17,6 +17,10 @@ State.Objects = {
     LFKEY = keybinds:fromVanilla("key.left"),
     RTKEY = keybinds:fromVanilla("key.right"),
 
+    ALTKEY = keybinds:newKeybind("ResetBox", "key.keyboard.left.alt"),
+    CTRLKEY = keybinds:newKeybind("ResetBox", "key.keyboard.left.control"),
+    SHIFTKEY = keybinds:newKeybind("ResetBox", "key.keyboard.left.shift"),
+
     --?Animations path
     GAS = animations["car.F1"].Gas,
     REVERSE = animations["car.F1"].Reverse,
@@ -139,8 +143,11 @@ State.Data = {
     
 
     checkBox = {vec(0,0,0), vec(0,0,0)},
+    isCheckBoxCreated = false,
     inCheckBox = false,
     wasInCheckBox = false,
+
+    renderBox = false
 }
 
 State.Input = {
