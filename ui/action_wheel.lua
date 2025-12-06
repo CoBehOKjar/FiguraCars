@@ -78,6 +78,12 @@ function ActionWheel.init()
             print("Таймер остановлен")
         end)
     obj.AW.camHeight = toggleStopwatch
+
+    local toggleRender = wheels[1]:newAction()
+        :title("Постоянный рендер зоны секундомера")
+        :item("minecraft:spawner")
+        :onToggle(function() ActionWheel.toggleBoxRender(not data.renderBox) end)
+    obj.AW.camHeight = toggleRender
 end
 
 
@@ -90,6 +96,10 @@ function ActionWheel.setCamHeight(dir)
     end
 
     ActionWheel.titleUpdate(obj.AW.camHeight, "Высота камеры: "..stgs.camHeight)
+end
+
+function ActionWheel.toggleBoxRender(tgl)
+    data.renderBox = tgl
 end
 
 return ActionWheel
