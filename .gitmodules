@@ -1,0 +1,9 @@
+[submodule "F1"]
+	path = F1
+	url = https://github.com/CoBehOKjar/FiguraCars_F1.git
+[submodule "SafetyCar"]
+	path = SafetyCar
+	url = https://github.com/CoBehOKjar/FiguraCars_SafetyCar.git
+[submodule "StopWatcher"]
+	path = StopWatcher
+	url = https://github.com/CoBehOKjar/FiguraCars_StopWatcher.git
