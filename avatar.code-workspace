@@ -1,14 +1,6 @@
 {
   "folders": [
-    {
-      "path": "."
-    },
-    {
-      "path": ".."
-    },
-    {
-      "path": "../../../../../../../../Code"
-    }
+    {"path": "."}
   ],
   "settings": {
     "json.schemas": [
@@ -16,7 +8,6 @@
         "fileMatch": ["**/avatar.json"],
         "url": ".vscode/avatar.schema.json"
       }
-    ],
-    "figura.librariesFolderPath": "C:\\Users\\CobehokJar\\AppData\\Roaming\\.minecraft\\figura\\avatars\\libraries\\"
+    ]
   }
 }
