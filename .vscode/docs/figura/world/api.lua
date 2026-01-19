@@ -234,6 +234,50 @@ function WorldAPI.getDimension() end
 ---@nodiscard
 function WorldAPI.getEntity(uuid) end
 
+---Gets all entities in radius.
+---
+---Returns `nil` if no loaded entity
+---@param pos1? Vector3
+---@param pos2? Vector3
+---@return table
+---@nodiscard
+function WorldAPI.getEntities(pos1, pos2) end
+
+---Gets all entities in radius.
+---
+---Returns `nil` if no loaded entity
+---@param pos1? Vector3
+---@param x2? number
+---@param y2? number
+---@param z2? number
+---@return table
+---@nodiscard
+function WorldAPI.getEntities(pos1, x2, y2, z2) end
+
+---Gets all entities in radius.
+---
+---Returns `nil` if no loaded entity
+---@param x1? number
+---@param y1? number
+---@param z1? number
+---@param pos2? Vector3
+---@return table
+---@nodiscard
+function WorldAPI.getEntities(x1, y1, z1, pos2) end
+
+---Gets all entities in radius.
+---
+---Returns `nil` if no loaded entity
+---@param x1? number
+---@param y1? number
+---@param z1? number
+---@param x2? number
+---@param y2? number
+---@param z2? number
+---@return table
+---@nodiscard
+function WorldAPI.getEntities(x1, y1, z1, x2, y2, z2) end
+
 ---Gets the highest position at the given horizontal coordinates using the given hightmap.
 ---
 ---If `heightmap` is `nil`, it will default to `"MOTION_BLOCKING"`.
